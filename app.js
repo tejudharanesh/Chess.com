@@ -3,6 +3,7 @@ const http = require("http");
 const socket = require("socket.io");
 const { Chess } = require("chess.js");
 const path = require("path");
+const { log } = require("console");
 
 const app = express();
 const server = http.createServer(app);
@@ -13,21 +14,34 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const chess = new Chess();
 let players = {};
-let currentPlayer = "W";
+let currentPlayer = "w";
 
 app.get("/", (req, res) => {
   res.render("index", { title: "Chess Game" });
 });
 
-io.on("connection", (socket) => {
-  //unique information from socket
-  console.log("User connected");
+io.on("connection", function (socket) {
+  console.log(socket.id);
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
+  if (!players.white) {
+    players.white = socket.id;
+    socket.emit("player role", "w");
+  } else if (!players.black) {
+    players.black = socket.id;
+    socket.emit("player role", "b");
+  } else {
+    socket.emit("game full");
+  }
+
+  socket.on("disconnect", function () {
+    if (players.white === socket.id) {
+      delete players.white;
+    } else if (players.black === socket.id) {
+      delete players.black;
+    }
   });
 });
 
-app.listen(3000, () => {
+server.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
